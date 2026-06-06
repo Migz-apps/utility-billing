@@ -1,0 +1,364 @@
+{
+    "baseUrl":  "http://localhost:8080",
+    "executedAt":  "2026-06-05T12:57:21",
+    "expectedEndpointCount":  74,
+    "testedEndpointCount":  59,
+    "passedCount":  59,
+    "failedCount":  0,
+    "results":  [
+                    {
+                        "endpoint":  "POST /api/v1/auth/register",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  "Registered public.20260605125704167@example.com and OTP dispatch was requested"
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/resend-verification-otp",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/verify-email",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/login",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  "Logged in as admin@utility.rw"
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/login",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  "Logged in as operator@utility.rw"
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/login",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  "Logged in as finance@utility.rw"
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/login",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  "Logged in as customer@utility.rw"
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/auth/login",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  "Logged in as public.20260605125704167@example.com"
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/auth/me",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/customers/me/profile",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/customers/me",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/admin/users",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/admin/users/staff",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/admin/users/{id}/deactivate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/admin/users/{id}/activate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/customers",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/customers",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/customers",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/customers/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PUT /api/v1/customers/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/customers/{id}/deactivate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/customers/{id}/activate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "DELETE /api/v1/customers/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/customers/{id}/activate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/meters",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/meters",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/meters/active",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/meters/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PUT /api/v1/meters/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/meters/{id}/deactivate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/meters/{id}/activate",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/customers/{customerId}/meters",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/readings",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/readings",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/readings/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/readings/meter/{meterId}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/readings/monthly",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/bills/generate/{readingId}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/bills/generate-monthly",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills/reference/{billReference}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills/customer/{customerId}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/bills/{id}/cancel",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/readings",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/bills/{id}/approve",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills/me",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/payments",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/payments",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/payments/{id}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/payments/bill/{billId}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/payments/customer/{customerId}",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/payments/me",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/readings",
+                        "status":  201,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/bills",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "PATCH /api/v1/bills/{id}/approve",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "POST /api/v1/bills/process-overdue",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    },
+                    {
+                        "endpoint":  "GET /api/v1/notifications",
+                        "status":  200,
+                        "passed":  true,
+                        "note":  ""
+                    }
+                ]
+}

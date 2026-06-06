@@ -1,0 +1,899 @@
+{
+  "info": {
+    "_postman_id": "dc4b2792-2a8d-4b1c-a4cb-utility-billing-system",
+    "name": "Utility Billing System",
+    "description": "Role-based Postman collection for the Utility Billing System backend.\n\nFolders are organised by the persona who uses them:\n- 🔐 Authentication (All Users): register, email OTP verification, login per role, identity, logout.\n- 👑 Admin: staff users, customer verification/management, meters, tariffs, billing configuration.\n- 🔧 Operator: capture meter readings (and view meters for context).\n- 💰 Finance: bills (approve/cancel/generate/overdue) and payments, plus notification oversight.\n- 👤 Customer: self-service profile completion and viewing own meters, bills, payments, notifications.\n- 🔁 End-to-End Happy Path: an automated sequence for a quick demo.\n\nImport together with the local environment file. Login requests save the JWT automatically into {{accessToken}} so protected requests run without pasting a token. Run the matching login for the role before calling a folder's requests.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{accessToken}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication (All Users)",
+      "description": "Shared by every persona. A public visitor registers and verifies email; staff and customers log in here. Each login stores {{accessToken}} for the rest of the collection.",
+      "item": [
+        {
+          "name": "Register Customer (Public Sign-up)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": { "type": "text/javascript", "exec": [
+                "const ts = Date.now().toString();",
+                "pm.environment.set('publicFullName', 'Postman Customer ' + ts.slice(-4));",
+                "pm.environment.set('publicEmail', 'public.' + ts + '@example.com');",
+                "pm.environment.set('publicPhone', '07' + ts.slice(-8));",
+                "if (!pm.environment.get('publicPassword')) { pm.environment.set('publicPassword', 'Customer123!'); }"
+              ] }
+            },
+            {
+              "listen": "test",
+              "script": { "type": "text/javascript", "exec": [
+                "pm.test('Registration accepted', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+                "pm.environment.set('registeredEmail', pm.environment.get('publicEmail'));",
+                "pm.environment.set('registeredPassword', pm.environment.get('publicPassword'));",
+                "// Email must be verified via OTP before login succeeds."
+              ] }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"{{publicFullName}}\",\n  \"email\": \"{{publicEmail}}\",\n  \"phoneNumber\": \"{{publicPhone}}\",\n  \"password\": \"{{publicPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "register" ] },
+            "description": "Creates a public customer user only (always ROLE_CUSTOMER). An OTP is emailed for verification."
+          }
+        },
+        {
+          "name": "Verify Customer Email (OTP)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"otpCode\": \"{{otpCode}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/verify-email", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "verify-email" ] },
+            "description": "Set {{otpCode}} to the 6-digit code sent to the registered email, then send. Login is blocked until the email is verified."
+          }
+        },
+        {
+          "name": "Resend Verification OTP",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{registeredEmail}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/resend-verification-otp", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "resend-verification-otp" ] }
+          }
+        },
+        {
+          "name": "Login — Admin",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);",
+            "pm.environment.set('currentEmail', json.data.email);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Login — Operator",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);",
+            "pm.environment.set('currentEmail', json.data.email);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{operatorEmail}}\",\n  \"password\": \"{{operatorPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Login — Finance",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);",
+            "pm.environment.set('currentEmail', json.data.email);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{financeEmail}}\",\n  \"password\": \"{{financePassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Login — Seeded Customer",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);",
+            "pm.environment.set('currentEmail', json.data.email);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{customerPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "Login — My Registered Customer",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);",
+            "pm.environment.set('currentEmail', json.data.email);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] },
+            "description": "Works only after the registered email has been verified via OTP."
+          }
+        },
+        {
+          "name": "Get My Identity (auth/me)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "me" ] }
+          }
+        },
+        {
+          "name": "Logout (Revoke Token)",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/logout", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "logout" ] },
+            "description": "Revokes the current {{accessToken}}. Subsequent calls with it return 401."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👑 Admin (System Administration)",
+      "description": "Run 'Login — Admin' first. Admin configures the system: staff users, customer verification/management, meters, tariffs and billing configuration.",
+      "item": [
+        {
+          "name": "Staff Users",
+          "description": "Create and manage Operator/Finance/Admin accounts. Only an Admin can reach these.",
+          "item": [
+            {
+              "name": "List Staff Users",
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/admin/users?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] }
+              }
+            },
+            {
+              "name": "List All Users",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "const rows = json.data || [];",
+                "if (rows.length > 0) {",
+                "  pm.environment.set('anyUserId', rows[0].id);",
+                "  const pending = rows.find(function (row) { return row.customerId && row.customerStatus === 'INACTIVE'; });",
+                "  if (pending) {",
+                "    pm.environment.set('customerId', pending.customerId);",
+                "    pm.environment.set('pendingCustomerUserId', pending.id);",
+                "  }",
+                "}"
+              ] } } ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/admin/users/all?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users", "all" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] }
+              }
+            },
+            {
+              "name": "Create Staff User (Operator / Finance / Admin)",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const ts = Date.now().toString();",
+                  "pm.environment.set('staffFullName', 'Staff User ' + ts.slice(-4));",
+                  "pm.environment.set('staffEmail', 'staff.' + ts + '@example.com');",
+                  "pm.environment.set('staffPhone', '07' + ts.slice(-8));"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('staffUserId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"{{staffFullName}}\",\n  \"email\": \"{{staffEmail}}\",\n  \"phoneNumber\": \"{{staffPhone}}\",\n  \"password\": \"{{staffPassword}}\",\n  \"role\": \"{{staffRole}}\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/admin/users/staff", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users", "staff" ] },
+                "description": "Set {{staffRole}} to ROLE_OPERATOR, ROLE_FINANCE or ROLE_ADMIN. Staff accounts are created ACTIVE. ROLE_CUSTOMER is rejected here."
+              }
+            },
+            {
+              "name": "Activate Staff User",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/admin/users/{{staffUserId}}/activate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users", "{{staffUserId}}", "activate" ] } }
+            },
+            {
+              "name": "Deactivate Staff User",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/admin/users/{{staffUserId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users", "{{staffUserId}}", "deactivate" ] }, "description": "Blocked by the backend if it would disable the last active admin." }
+            }
+          ]
+        },
+        {
+          "name": "Customers (Verify & Manage)",
+          "description": "Verify self-registered customers (activate), or create/link customer profiles directly.",
+          "item": [
+            {
+              "name": "List Customers",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('customerId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            {
+              "name": "List Pending Verification Customers",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "const rows = json.data || [];",
+                "if (rows.length > 0) {",
+                "  pm.environment.set('customerId', rows[0].id);",
+                "  if (rows[0].userId) { pm.environment.set('pendingCustomerUserId', rows[0].userId); }",
+                "}",
+                "pm.test('Pending verification list loaded', function () { pm.expect(pm.response.code).to.equal(200); });"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/pending-verification?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "pending-verification" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            {
+              "name": "Activate Customer By User Id (Approve Verification)",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/customers/user/{{pendingCustomerUserId}}/activate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "user", "{{pendingCustomerUserId}}", "activate" ] }, "description": "Official verification step for a self-submitted or linked customer profile. Run 'List Pending Verification Customers' first." }
+            },
+            {
+              "name": "Create Customer (Standalone)",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const ts = Date.now().toString();",
+                  "pm.environment.set('newCustomerFullName', 'Postman Customer Admin ' + ts.slice(-4));",
+                  "pm.environment.set('newCustomerEmail', 'customer.admin.' + ts + '@example.com');",
+                  "pm.environment.set('newCustomerPhone', '07' + ts.slice(-8));",
+                  "pm.environment.set('newCustomerNationalId', ('11990800' + ts.slice(-8)).slice(0, 16));",
+                  "pm.environment.set('newCustomerAddress', 'Kigali Test Address ' + ts.slice(-4));"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('customerId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"{{newCustomerFullName}}\",\n  \"nationalId\": \"{{newCustomerNationalId}}\",\n  \"email\": \"{{newCustomerEmail}}\",\n  \"phoneNumber\": \"{{newCustomerPhone}}\",\n  \"address\": \"{{newCustomerAddress}}\",\n  \"userId\": null\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/customers", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers" ] },
+                "description": "Creates a customer not yet linked to a login account (userId null)."
+              }
+            },
+            {
+              "name": "List Unlinked Customer Users (Find userId for Linking)",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "const rows = json.data || [];",
+                "if (rows.length > 0) { pm.environment.set('linkUserId', rows[0].id); }",
+                "pm.test('Captured a customer userId for linking', function () { pm.expect(rows.length).to.be.above(0); });"
+              ] } } ],
+              "request": {
+                "method": "GET",
+                "url": { "raw": "{{baseUrl}}/api/v1/admin/users/customers/unlinked?search=", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "admin", "users", "customers", "unlinked" ], "query": [ { "key": "search", "value": "", "description": "optional email or full-name filter" } ] },
+                "description": "Lists only ROLE_CUSTOMER users that do not yet have a linked customer profile. Saves the first match into {{linkUserId}}."
+              }
+            },
+            {
+              "name": "Create Customer (Link Existing User)",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"nationalId\": \"1234567890123456\",\n  \"address\": \"Kigali, Gasabo\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/customers/from-user/{{linkUserId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "from-user", "{{linkUserId}}" ] },
+                "description": "Official user-to-customer conversion path. Run 'List Unlinked Customer Users' first to populate {{linkUserId}}. The backend copies fullName, email, and phoneNumber from the user."
+              }
+            },
+            {
+              "name": "Get Customer By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "{{customerId}}" ] } }
+            },
+            {
+              "name": "Update Customer",
+              "request": {
+                "method": "PUT",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"{{newCustomerFullName}} Updated\",\n  \"nationalId\": \"{{newCustomerNationalId}}\",\n  \"email\": \"{{newCustomerEmail}}\",\n  \"phoneNumber\": \"{{newCustomerPhone}}\",\n  \"address\": \"{{newCustomerAddress}} Updated\",\n  \"userId\": null\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "{{customerId}}" ] }
+              }
+            },
+            {
+              "name": "Deactivate Customer",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "{{customerId}}", "deactivate" ] } }
+            },
+            {
+              "name": "Delete or Deactivate Customer",
+              "request": { "method": "DELETE", "url": { "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "{{customerId}}" ] }, "description": "Hard-deletes if the customer has no meters/bills/payments; otherwise soft-deletes (sets INACTIVE) to preserve financial history." }
+            },
+            {
+              "name": "Get Customer Meters By Customer Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/{{customerId}}/meters?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "{{customerId}}", "meters" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            }
+          ]
+        },
+        {
+          "name": "Meters",
+          "description": "Only an Admin assigns and manages meters. A meter must belong to an ACTIVE customer.",
+          "item": [
+            {
+              "name": "List Meters",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('meterId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/meters?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            {
+              "name": "Create Meter (Assign to Customer)",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const ts = Date.now().toString();",
+                  "pm.environment.set('newMeterNumber', 'POSTMAN-' + ts.slice(-8));"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('meterId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"meterNumber\": \"{{newMeterNumber}}\",\n  \"meterType\": \"WATER\",\n  \"installationDate\": \"2026-01-01\",\n  \"customerId\": {{customerId}}\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/meters", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters" ] }
+              }
+            },
+            {
+              "name": "List Active Meters",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/meters/active?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "active" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            {
+              "name": "Get Meter By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/meters/{{meterId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "{{meterId}}" ] } }
+            },
+            {
+              "name": "Update Meter",
+              "request": {
+                "method": "PUT",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"meterNumber\": \"{{newMeterNumber}}-UPD\",\n  \"meterType\": \"WATER\",\n  \"installationDate\": \"2026-01-01\",\n  \"customerId\": {{customerId}}\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/meters/{{meterId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "{{meterId}}" ] }
+              }
+            },
+            {
+              "name": "Activate Meter",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/meters/{{meterId}}/activate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "{{meterId}}", "activate" ] } }
+            },
+            {
+              "name": "Deactivate Meter",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/meters/{{meterId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "{{meterId}}", "deactivate" ] } }
+            }
+          ]
+        },
+        {
+          "name": "Tariffs",
+          "description": "Versioned consumption tariffs (FLAT or TIERED). New versions apply to future billing only.",
+          "item": [
+            {
+              "name": "List Tariffs",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('tariffId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/tariffs", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "tariffs" ] } }
+            },
+            {
+              "name": "Create Tariff",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const version = Number(String(Date.now()).slice(-6));",
+                  "pm.environment.set('tariffName', 'Postman Tariff ' + version);",
+                  "pm.environment.set('tariffVersion', String(version));"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('tariffId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{tariffName}}\",\n  \"meterType\": \"WATER\",\n  \"tariffType\": \"FLAT\",\n  \"ratePerUnit\": 120.50,\n  \"version\": {{tariffVersion}},\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTo\": null,\n  \"active\": true\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/tariffs", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "tariffs" ] },
+                "description": "For a TIERED tariff set tariffType=TIERED and omit ratePerUnit, then add tiers (must start at 0 and be contiguous)."
+              }
+            },
+            {
+              "name": "Get Tariff By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/tariffs/{{tariffId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "tariffs", "{{tariffId}}" ] } }
+            },
+            {
+              "name": "Add Tariff Tier",
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"minUnits\": 0,\n  \"maxUnits\": 50,\n  \"ratePerUnit\": 90.00\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/tariffs/{{tariffId}}/tiers", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "tariffs", "{{tariffId}}", "tiers" ] }
+              }
+            },
+            {
+              "name": "Deactivate Tariff",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/tariffs/{{tariffId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "tariffs", "{{tariffId}}", "deactivate" ] } }
+            }
+          ]
+        },
+        {
+          "name": "Billing Configuration",
+          "description": "Fixed service charges, taxes (VAT) and late-payment penalties — all versioned and time-effective.",
+          "item": [
+            {
+              "name": "List Fixed Charges",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('fixedChargeId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/fixed-charges", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "fixed-charges" ] } }
+            },
+            {
+              "name": "Create Fixed Charge",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "pm.environment.set('configVersion', String(Number(String(Date.now()).slice(-6))));"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('fixedChargeId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"meterType\": \"WATER\",\n  \"amount\": 5000,\n  \"version\": {{configVersion}},\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTo\": null,\n  \"active\": true\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/fixed-charges", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "fixed-charges" ] }
+              }
+            },
+            {
+              "name": "Get Fixed Charge By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/fixed-charges/{{fixedChargeId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "fixed-charges", "{{fixedChargeId}}" ] } }
+            },
+            {
+              "name": "Deactivate Fixed Charge",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/fixed-charges/{{fixedChargeId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "fixed-charges", "{{fixedChargeId}}", "deactivate" ] } }
+            },
+            {
+              "name": "List Taxes",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('taxId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/taxes", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "taxes" ] } }
+            },
+            {
+              "name": "Create Tax",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const ts = Date.now().toString().slice(-6);",
+                  "pm.environment.set('taxName', 'Postman Tax ' + ts);"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('taxId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{taxName}}\",\n  \"percentage\": 18.00,\n  \"active\": true,\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTo\": null\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/taxes", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "taxes" ] }
+              }
+            },
+            {
+              "name": "Get Tax By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/taxes/{{taxId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "taxes", "{{taxId}}" ] } }
+            },
+            {
+              "name": "Deactivate Tax",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/taxes/{{taxId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "taxes", "{{taxId}}", "deactivate" ] } }
+            },
+            {
+              "name": "List Penalties",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('penaltyId', json.data[0].id); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/penalties", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "penalties" ] } }
+            },
+            {
+              "name": "Create Penalty",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "const ts = Date.now().toString().slice(-6);",
+                  "pm.environment.set('penaltyName', 'Postman Penalty ' + ts);"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('penaltyId', json.data.id);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{penaltyName}}\",\n  \"penaltyType\": \"PERCENTAGE\",\n  \"amountOrPercentage\": 5.00,\n  \"gracePeriodDays\": 5,\n  \"active\": true,\n  \"effectiveFrom\": \"2026-01-01\",\n  \"effectiveTo\": null\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/penalties", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "penalties" ] }
+              }
+            },
+            {
+              "name": "Get Penalty By Id",
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/penalties/{{penaltyId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "penalties", "{{penaltyId}}" ] } }
+            },
+            {
+              "name": "Deactivate Penalty",
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/penalties/{{penaltyId}}/deactivate", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "penalties", "{{penaltyId}}", "deactivate" ] } }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔧 Operator (Meter Readings)",
+      "description": "Run 'Login — Operator' first. Operators capture readings; a valid reading auto-generates a PENDING_APPROVAL bill. They may also view meters for context.",
+      "item": [
+        {
+          "name": "View Meters (Read-Only)",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.length > 0) {",
+            "  pm.environment.set('activeMeterId', json.data[0].id);",
+            "  pm.environment.set('meterId', json.data[0].id);",
+            "  pm.environment.set('customerId', json.data[0].customerId);",
+            "}"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/meters/active?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "active" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        },
+        {
+          "name": "Capture Meter Reading (Auto-Generates Bill)",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "if (!pm.environment.get('readingDate')) {",
+              "  const d = new Date(); d.setDate(5);",
+              "  const date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-05';",
+              "  pm.environment.set('readingDate', date);",
+              "  pm.environment.set('readingMonth', String(d.getMonth() + 1));",
+              "  pm.environment.set('readingYear', String(d.getFullYear()));",
+              "}",
+              "if (!pm.environment.get('readingValue')) { pm.environment.set('readingValue', '250.0000'); }",
+              "if (!pm.environment.get('activeMeterId')) { pm.environment.set('activeMeterId', pm.environment.get('meterId') || '1'); }"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('readingId', json.data.id);",
+              "if (json.data.generatedBillReference) { pm.environment.set('billReference', json.data.generatedBillReference); }",
+              "pm.environment.set('meterId', json.data.meterId);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"meterId\": {{activeMeterId}},\n  \"currentReading\": {{readingValue}},\n  \"readingDate\": \"{{readingDate}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/readings", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings" ] },
+            "description": "currentReading must exceed the previous reading; one reading per meter per month/year; meter and customer must be ACTIVE."
+          }
+        },
+        {
+          "name": "List Readings",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/readings?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        },
+        {
+          "name": "Get Reading By Id",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/readings/{{readingId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings", "{{readingId}}" ] } }
+        },
+        {
+          "name": "Get Readings By Meter",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/readings/meter/{{activeMeterId}}?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings", "meter", "{{activeMeterId}}" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        },
+        {
+          "name": "Get Monthly Readings",
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/readings/monthly?month={{readingMonth}}&year={{readingYear}}&page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings", "monthly" ], "query": [ { "key": "month", "value": "{{readingMonth}}" }, { "key": "year", "value": "{{readingYear}}" }, { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        }
+      ]
+    },
+    {
+      "name": "💰 Finance (Billing & Payments)",
+      "description": "Run 'Login — Finance' first (Admin can also do all of these). Finance approves bills, records payments, processes overdue bills, and oversees notifications.",
+      "item": [
+        {
+          "name": "Bills",
+          "item": [
+            {
+              "name": "List Bills",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "const rows = json.data || [];",
+                "const pending = rows.find(function (r) { return r.status === 'PENDING_APPROVAL'; }) || rows[0];",
+                "if (pending) { pm.environment.set('billId', pending.id); pm.environment.set('billReference', pending.billReference); pm.environment.set('outstandingBalance', String(pending.outstandingBalance)); }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            { "name": "Get Bill By Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills/{{billId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "{{billId}}" ] } } },
+            { "name": "Get Bill By Reference", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills/reference/{{billReference}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "reference", "{{billReference}}" ] } } },
+            { "name": "Get Bills By Customer Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills/customer/{{customerId}}?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "customer", "{{customerId}}" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+            { "name": "Generate Bill By Reading Id", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/bills/generate/{{readingId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "generate", "{{readingId}}" ] }, "description": "Idempotent: returns the existing bill if one already exists for the reading." } },
+            { "name": "Generate Monthly Bills", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/bills/generate-monthly?month={{readingMonth}}&year={{readingYear}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "generate-monthly" ], "query": [ { "key": "month", "value": "{{readingMonth}}" }, { "key": "year", "value": "{{readingYear}}" } ] } } },
+            {
+              "name": "Approve Bill",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "pm.environment.set('billReference', json.data.billReference);",
+                "pm.environment.set('outstandingBalance', String(json.data.outstandingBalance));"
+              ] } } ],
+              "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/bills/{{billId}}/approve", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "{{billId}}", "approve" ] } }
+            },
+            { "name": "Cancel Bill", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/bills/{{billId}}/cancel", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "{{billId}}", "cancel" ] }, "description": "Allowed only when nothing has been paid on the bill." } },
+            { "name": "Process Overdue Bills", "request": { "method": "POST", "url": { "raw": "{{baseUrl}}/api/v1/bills/process-overdue", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "process-overdue" ] }, "description": "Applies one-time penalties to bills past their due date plus grace period." } }
+          ]
+        },
+        {
+          "name": "Payments",
+          "item": [
+            {
+              "name": "Record Payment",
+              "event": [
+                { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+                  "if (!pm.environment.get('paymentAmount')) {",
+                  "  const outstanding = Number(pm.environment.get('outstandingBalance') || '0');",
+                  "  const amount = outstanding > 0 ? Math.min(1000, outstanding) : 1000;",
+                  "  pm.environment.set('paymentAmount', String(amount));",
+                  "}",
+                  "if (!pm.environment.get('paymentDate')) { pm.environment.set('paymentDate', pm.environment.get('readingDate') || new Date().toISOString().slice(0,10)); }"
+                ] } },
+                { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                  "const json = pm.response.json();",
+                  "pm.environment.set('paymentId', json.data.id);",
+                  "pm.environment.set('paymentReference', json.data.paymentReference);"
+                ] } }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [ { "key": "Content-Type", "value": "application/json" } ],
+                "body": { "mode": "raw", "raw": "{\n  \"billReference\": \"{{billReference}}\",\n  \"amountPaid\": {{paymentAmount}},\n  \"paymentMethod\": \"MOBILE_MONEY\",\n  \"paymentDate\": \"{{paymentDate}}\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments" ] },
+                "description": "Bill must be APPROVED/PARTIALLY_PAID/OVERDUE. Amount > 0 and cannot exceed the outstanding balance. Full payment marks the bill PAID."
+              }
+            },
+            { "name": "List Payments", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+            { "name": "Get Payment By Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/{{paymentId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments", "{{paymentId}}" ] } } },
+            { "name": "Get Payments By Bill Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/bill/{{billId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments", "bill", "{{billId}}" ] } } },
+            { "name": "Get Payments By Customer Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/payments/customer/{{customerId}}?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments", "customer", "{{customerId}}" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } }
+          ]
+        },
+        {
+          "name": "Notifications (Oversight)",
+          "item": [
+            {
+              "name": "List All Notifications",
+              "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+                "const json = pm.response.json();",
+                "if (json.data && json.data.length > 0) { pm.environment.set('notificationId', json.data[0].id); if (json.data[0].customerId) { pm.environment.set('customerId', json.data[0].customerId); } }"
+              ] } } ],
+              "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/notifications?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "notifications" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+            },
+            { "name": "Get Notifications By Customer Id", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/notifications/customer/{{customerId}}?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "notifications", "customer", "{{customerId}}" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+            { "name": "Mark Notification As Read", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/notifications/{{notificationId}}/read", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "notifications", "{{notificationId}}", "read" ] } } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👤 Customer (Self Service)",
+      "description": "Run 'Login — Seeded Customer' or 'Login — My Registered Customer' first. A customer completes their profile, then (after admin activation + meter assignment) views their own data.",
+      "item": [
+        {
+          "name": "Complete My Profile (Submit National ID + Address)",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const ts = Date.now().toString();",
+              "pm.environment.set('profileNationalId', ('11990800' + ts.slice(-8)).slice(0, 16));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "pm.test('Profile created and pending verification', function () { pm.expect([200, 201]).to.include(pm.response.code); });",
+              "const json = pm.response.json();",
+              "if (json.data && json.data.id) { pm.environment.set('myCustomerId', json.data.id); }"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"nationalId\": \"{{profileNationalId}}\",\n  \"address\": \"Kigali, Gasabo, Kimironko\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/customers/me/profile", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "profile" ] },
+            "description": "Creates the caller's customer profile (status INACTIVE) linked to their user. An Admin must then activate it before billing can start."
+          }
+        },
+        { "name": "Get My Profile", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me" ] } } },
+        { "name": "My Meters", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/me/meters?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "meters" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+        { "name": "My Bills", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/me/bills?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "bills" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+        { "name": "My Payments", "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/me/payments?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "payments" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } } },
+        {
+          "name": "My Notifications",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "if (json.data && json.data.length > 0) { pm.environment.set('notificationId', json.data[0].id); }"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/customers/me/notifications?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "notifications" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        },
+        { "name": "Mark My Notification As Read", "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/customers/me/notifications/{{notificationId}}/read", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "customers", "me", "notifications", "{{notificationId}}", "read" ] } } }
+      ]
+    },
+    {
+      "name": "🔁 End-to-End Happy Path (Automated)",
+      "description": "A quick demo run using the Admin account (Admin can do every step). Run top to bottom: it logs in, picks an active meter, captures a reading, finds and approves the generated bill, then records a partial and the remaining payment.",
+      "item": [
+        {
+          "name": "1. Login Admin",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('accessToken', json.data.token);",
+            "pm.environment.set('currentRole', json.data.role);"
+          ] } } ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "auth", "login" ] }
+          }
+        },
+        {
+          "name": "2. Get Active Meters",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.test('At least one active meter exists', function () { pm.expect(json.data.length).to.be.above(0); });",
+            "pm.environment.set('activeMeterId', json.data[0].id);",
+            "pm.environment.set('meterId', json.data[0].id);",
+            "pm.environment.set('customerId', json.data[0].customerId);"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/meters/active?page=0&size=20", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "meters", "active" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "20" } ] } }
+        },
+        {
+          "name": "3. Prepare Next Reading Variables",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "const rows = json.data || [];",
+            "const used = new Set();",
+            "let maxReading = 0;",
+            "rows.forEach(function (row) {",
+            "  used.add(String(row.billingYear) + '-' + String(row.billingMonth).padStart(2, '0'));",
+            "  maxReading = Math.max(maxReading, Number(row.currentReading || 0));",
+            "});",
+            "let chosen = null;",
+            "for (let offset = 0; offset < 12; offset++) {",
+            "  const d = new Date(); d.setDate(5); d.setMonth(d.getMonth() - offset);",
+            "  const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');",
+            "  if (!used.has(key)) { chosen = d; break; }",
+            "}",
+            "pm.test('An unused billing month is available', function () { pm.expect(chosen).to.not.equal(null); });",
+            "const readingDate = chosen.getFullYear() + '-' + String(chosen.getMonth() + 1).padStart(2, '0') + '-05';",
+            "pm.environment.set('readingDate', readingDate);",
+            "pm.environment.set('readingMonth', String(chosen.getMonth() + 1));",
+            "pm.environment.set('readingYear', String(chosen.getFullYear()));",
+            "pm.environment.set('readingValue', (maxReading + 250).toFixed(4));"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/readings/meter/{{activeMeterId}}?page=0&size=50", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings", "meter", "{{activeMeterId}}" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "50" } ] } }
+        },
+        {
+          "name": "4. Create Reading",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('readingId', json.data.id);",
+            "pm.environment.set('billReference', json.data.generatedBillReference);",
+            "pm.environment.set('meterId', json.data.meterId);"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"meterId\": {{activeMeterId}},\n  \"currentReading\": {{readingValue}},\n  \"readingDate\": \"{{readingDate}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/readings", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "readings" ] }
+          }
+        },
+        {
+          "name": "5. Find Generated Bill",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "const rows = json.data || [];",
+            "let bill = rows.find(function (row) { return String(row.meterReadingId) === String(pm.environment.get('readingId')); });",
+            "if (!bill) { bill = rows.find(function (row) { return row.status === 'PENDING_APPROVAL'; }) || rows[0]; }",
+            "pm.test('A bill was found for the flow', function () { pm.expect(bill).to.exist; });",
+            "pm.environment.set('billId', bill.id);",
+            "pm.environment.set('billReference', bill.billReference);",
+            "pm.environment.set('customerId', bill.customerId);",
+            "pm.environment.set('outstandingBalance', String(bill.outstandingBalance));"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills?page=0&size=50", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills" ], "query": [ { "key": "page", "value": "0" }, { "key": "size", "value": "50" } ] } }
+        },
+        {
+          "name": "6. Approve Bill",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('billReference', json.data.billReference);",
+            "pm.environment.set('outstandingBalance', String(json.data.outstandingBalance));"
+          ] } } ],
+          "request": { "method": "PATCH", "url": { "raw": "{{baseUrl}}/api/v1/bills/{{billId}}/approve", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "{{billId}}", "approve" ] } }
+        },
+        {
+          "name": "7. Record Partial Payment",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "const outstanding = Number(pm.environment.get('outstandingBalance') || '0');",
+              "const amount = outstanding > 1000 ? 1000 : Math.max(1, Math.floor(outstanding / 2));",
+              "pm.environment.set('paymentAmount', String(amount));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('paymentId', json.data.id);",
+              "pm.environment.set('paymentReference', json.data.paymentReference);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"billReference\": \"{{billReference}}\",\n  \"amountPaid\": {{paymentAmount}},\n  \"paymentMethod\": \"MOBILE_MONEY\",\n  \"paymentDate\": \"{{readingDate}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments" ] }
+          }
+        },
+        {
+          "name": "8. Refresh Bill",
+          "event": [ { "listen": "test", "script": { "type": "text/javascript", "exec": [
+            "const json = pm.response.json();",
+            "pm.environment.set('billReference', json.data.billReference);",
+            "pm.environment.set('outstandingBalance', String(json.data.outstandingBalance));",
+            "pm.environment.set('billStatus', json.data.status);"
+          ] } } ],
+          "request": { "method": "GET", "url": { "raw": "{{baseUrl}}/api/v1/bills/{{billId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "bills", "{{billId}}" ] } }
+        },
+        {
+          "name": "9. Record Remaining Payment",
+          "event": [
+            { "listen": "prerequest", "script": { "type": "text/javascript", "exec": [
+              "pm.environment.set('paymentAmount', pm.environment.get('outstandingBalance'));"
+            ] } },
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [
+              "const json = pm.response.json();",
+              "pm.environment.set('paymentId', json.data.id);",
+              "pm.environment.set('paymentReference', json.data.paymentReference);"
+            ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"billReference\": \"{{billReference}}\",\n  \"amountPaid\": {{paymentAmount}},\n  \"paymentMethod\": \"MOBILE_MONEY\",\n  \"paymentDate\": \"{{readingDate}}\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/v1/payments", "host": [ "{{baseUrl}}" ], "path": [ "api", "v1", "payments" ] }
+          }
+        }
+      ]
+    }
+  ]
+}

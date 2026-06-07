@@ -58,6 +58,7 @@ public class OpenApiConfig {
             2. POST `/api/v1/auth/reset-password` — submit email + OTP + new password
 
             **Notification delivery model (current behavior):**
+            - Meter assignment emails include the created meter ID and are sent to the customer's registered address
             - Bill/payment/overdue notification events are delivered by **email** to each user's registered address
             - OTP emails (verification and password reset) are also delivered by email
             - New business-event notifications are no longer persisted as in-app notification records

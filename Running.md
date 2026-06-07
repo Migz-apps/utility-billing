@@ -233,3 +233,74 @@ utility-billing/
 ├── pom.xml                           Maven dependencies
 └── mvnw.cmd                          Maven Wrapper (no Maven install needed)
 ```
+
+
+
+APplication flow:
+
+Public user registers
+Who calls: Public (no login)
+Endpoint: POST /api/v1/auth/register
+Swagger group: 1 — Public (no login)
+Email sent: Verification OTP email to the new user’s email
+
+(Optional) Resend OTP
+Who calls: Public (no login)
+Endpoint: POST /api/v1/auth/resend-verification-otp
+Group: 1 — Public (no login)
+Email sent: Another verification OTP email
+
+Verify email with OTP
+Who calls: Public (no login)
+Endpoint: POST /api/v1/auth/verify-email
+Group: 1 — Public (no login)
+Email sent: none (this consumes OTP and activates account)
+
+Login as the new customer
+Who calls: Customer
+Endpoint: POST /api/v1/auth/login
+Group: 1 — Public (no login)
+Email sent: none
+
+Customer creates own profile
+Who calls: Logged-in CUSTOMER
+Endpoint: POST /api/v1/customers/me/profile
+Group: 2 — CUSTOMER — My Account
+Email sent: none
+
+Admin activates that customer profile
+Who calls: Logged-in ADMIN
+Endpoint: PATCH /api/v1/customers/{id}/activate
+Group: 5 — ADMIN — Management
+Email sent: none
+
+Admin creates meter and assigns it to that customer
+Who calls: Logged-in ADMIN
+Endpoint: POST /api/v1/meters (with customerId)
+Group: 5 — ADMIN — Management
+Email sent: none
+
+Operator captures meter reading
+Who calls: Logged-in OPERATOR
+Endpoint: POST /api/v1/readings
+Group: 3 — OPERATOR — Field Work
+Email sent: Bill generated email to customer (triggered by bill generation flow)
+Finance approves bill
+
+Who calls: Logged-in FINANCE (or ADMIN)
+Endpoint: PATCH /api/v1/bills/{id}/approve
+Group: 4 — FINANCE — Billing Desk
+Email sent: none
+
+Finance records payment
+Who calls: Logged-in FINANCE (or ADMIN)
+Endpoint: POST /api/v1/payments
+Group: 4 — FINANCE — Billing Desk
+Email sent:
+always: Payment confirmed email
+if payment clears full outstanding balance: Bill paid email
+“Last email in good circumstances”
+In a normal successful flow (no overdue problems), the last email is:
+
+BILL_PAID email (sent after full settlement), triggered by
+POST /api/v1/payments when the bill becomes fully paid.

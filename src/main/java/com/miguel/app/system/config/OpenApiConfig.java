@@ -21,19 +21,18 @@ import org.springdoc.core.customizers.OpenApiCustomizer;
 public class OpenApiConfig {
 
     private static final String API_DESCRIPTION = """
-            Rwandan national utility billing — water and electricity. Microservices behind gateway.\
-             All responses use the standard `ApiResponse` envelope.
+            Rwandan national utility billing for water and electricity.\
+             This is a single Spring Boot REST API and all responses use the standard `ApiResponse` envelope.
 
             **Who can log in?** Any user with an account — ADMIN, OPERATOR, FINANCE, or CUSTOMER.\
-             Use POST `/api/auth/login` with their email and password, then click **Authorize** at the top right and paste the token.\
-             Swagger UI shows **all role sections** by default.
+             Use POST `/api/v1/auth/login` with email and password, then click **Authorize** and paste the returned JWT.
 
             **Role-based API groups in Swagger:**
-            - `1 — Public` — registration & login (no JWT)
-            - `2 — CUSTOMER — My Account` — `/api/me/**` self-service (profile, bills, payments…)
-            - `3 — OPERATOR — Field Work` — capture readings, view meters
-            - `4 — FINANCE — Billing Desk` — approve bills, record payments
-            - `5 — ADMIN — Management` — users, customers, tariffs, bill generation
+            - `1 — Public` — registration, login, password reset (no JWT)
+            - `2 — CUSTOMER — My Account` — self-service profile, bills, payments
+            - `3 — OPERATOR — Field Work` — capture meter readings and view meters
+            - `4 — FINANCE — Billing Desk` — approve bills, record payments, billing oversight
+            - `5 — ADMIN — Management` — users, customers, meters, tariffs, billing configuration
 
             ---
 
@@ -46,18 +45,22 @@ public class OpenApiConfig {
             | `FINANCE` | `finance@utility.rw` | `Finance123!` |
             | `CUSTOMER` | `customer@utility.rw` | `Customer123!` |
 
-            Seeded meters: `WATER-0001` (water) and `ELEC-0001` (electricity), both assigned to the seeded customer.
+            Seeded meters: `WATER-0001` (water) and `ELEC-0001` (electricity), assigned to the seeded customer.
 
             ---
 
-            **Who can self-register?** Only CUSTOMER accounts via the two-step OTP flow:
-            1. POST `/api/auth/register` — submit details, receive 6-digit OTP by email
-            2. POST `/api/auth/register/verify` — submit email + OTP to create the account.\
-             Operator, Finance, and Admin users must be created by an Admin via POST `/api/users`
+            **Public registration (CUSTOMER only):**
+            1. POST `/api/v1/auth/register` — submit details and receive email verification OTP
+            2. POST `/api/v1/auth/verify-email` — submit email + OTP to activate account
 
-            **Forgot password?** Two-step OTP flow (all roles):
-            1. POST `/api/auth/forgot-password` — receive 6-digit OTP by email
-            2. POST `/api/auth/reset-password` — submit email + OTP + new password
+            **Forgot password (all roles):**
+            1. POST `/api/v1/auth/forgot-password` — receive password reset OTP by email
+            2. POST `/api/v1/auth/reset-password` — submit email + OTP + new password
+
+            **Notification delivery model (current behavior):**
+            - Bill/payment/overdue notification events are delivered by **email** to each user's registered address
+            - OTP emails (verification and password reset) are also delivered by email
+            - New business-event notifications are no longer persisted as in-app notification records
             """;
 
     @Bean

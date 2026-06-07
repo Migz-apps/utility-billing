@@ -7,4 +7,6 @@ public interface MailService {
     void sendVerificationOtp(String recipientEmail, String recipientName, String otpCode, LocalDateTime expiresAt);
 
     void sendPasswordResetOtp(String recipientEmail, String recipientName, String otpCode, LocalDateTime expiresAt);
+
+    void sendSystemNotification(String recipientEmail, String recipientName, String subject, String message);
 }

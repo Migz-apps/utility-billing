@@ -13,14 +13,17 @@ import com.miguel.app.system.exception.ForbiddenException;
 import com.miguel.app.system.exception.ResourceNotFoundException;
 import com.miguel.app.system.repository.CustomerRepository;
 import com.miguel.app.system.repository.NotificationRepository;
+import com.miguel.app.system.service.interfaces.MailService;
 import com.miguel.app.system.service.interfaces.NotificationService;
 import com.miguel.app.system.util.EntityMapper;
 import com.miguel.app.system.util.PageResponseBuilder;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -29,26 +32,55 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final CustomerRepository customerRepository;
     private final AuthenticatedUserService authenticatedUserService;
+    private final MailService mailService;
 
     @Override
     @Transactional
     public NotificationResponse create(Customer customer, Bill bill, String message, NotificationType type) {
-        if (bill != null) {
-            return notificationRepository.findFirstByBillAndNotificationType(bill, type)
-                    .map(EntityMapper::toNotificationResponse)
-                    .orElseGet(() -> saveNotification(customer, bill, message, type));
+        if (customer == null || customer.getEmail() == null || customer.getEmail().isBlank()) {
+            log.warn("Skipping notification email because customer email is missing for type {}", type);
+            return transientResponse(customer, bill, message, type);
         }
-        return saveNotification(customer, bill, message, type);
+
+        try {
+            mailService.sendSystemNotification(
+                    customer.getEmail(),
+                    customer.getFullName(),
+                    subjectFor(type),
+                    message
+            );
+        } catch (RuntimeException ex) {
+            // Do not break billing/payment flows because email delivery failed.
+            log.error("Failed to send {} notification email to {}", type, customer.getEmail(), ex);
+        }
+
+        // Notification delivery is email-first and does not persist new in-app rows.
+        return transientResponse(customer, bill, message, type);
     }
 
-    private NotificationResponse saveNotification(Customer customer, Bill bill, String message, NotificationType type) {
-        Notification notification = new Notification();
-        notification.setCustomer(customer);
-        notification.setBill(bill);
-        notification.setMessage(message);
-        notification.setNotificationType(type);
-        notification.setStatus(NotificationStatus.UNREAD);
-        return EntityMapper.toNotificationResponse(notificationRepository.save(notification));
+    private NotificationResponse transientResponse(Customer customer, Bill bill, String message, NotificationType type) {
+        Long customerId = customer == null ? null : customer.getId();
+        Long billId = bill == null ? null : bill.getId();
+        String billReference = bill == null ? null : bill.getBillReference();
+        return new NotificationResponse(
+                null,
+                customerId,
+                billId,
+                billReference,
+                message,
+                type,
+                NotificationStatus.UNREAD,
+                null
+        );
+    }
+
+    private String subjectFor(NotificationType type) {
+        return switch (type) {
+            case BILL_GENERATED -> "Utility bill generated";
+            case PAYMENT_CONFIRMED -> "Payment confirmed";
+            case BILL_PAID -> "Bill fully paid";
+            case BILL_OVERDUE -> "Bill overdue";
+        };
     }
 
     @Override

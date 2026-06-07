@@ -93,4 +93,31 @@ public class MailServiceImpl implements MailService {
             throw new BusinessRuleException("Unable to send password reset email right now. Please try again.");
         }
     }
+
+    @Override
+    public void sendSystemNotification(String recipientEmail, String recipientName, String subject, String message) {
+        if (!mailEnabled) {
+            log.warn("Email delivery is disabled. System notification for {} was not sent.", recipientEmail);
+            throw new BusinessRuleException("Email service is currently unavailable. Please contact support.");
+        }
+
+        SimpleMailMessage email = new SimpleMailMessage();
+        email.setFrom(senderEmail);
+        email.setTo(recipientEmail);
+        email.setSubject(subject);
+        email.setText("""
+                Hello %s,
+
+                %s
+
+                Utility Billing System
+                """.formatted(recipientName, message));
+
+        try {
+            mailSender.send(email);
+        } catch (MailException ex) {
+            log.error("Failed to send system notification to {}", recipientEmail, ex);
+            throw new BusinessRuleException("Unable to send notification email right now. Please try again.");
+        }
+    }
 }

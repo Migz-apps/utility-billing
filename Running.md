@@ -94,15 +94,21 @@ cd C:\path\to\utility-billing
 
 ## Step 7 — Start PostgreSQL service (if not running automatically)
 
-In PowerShell (run as Administrator):
+In PowerShell (run as Administrator): 
 ```
 net start postgresql-x64-17
 ```
 
-> Check the exact service name with: `Get-Service -Name "postgresql*"`
+> Check the exact service name with:`Get-Service -Name "postgresql*"`
 > Replace `postgresql-x64-17` with whatever name appears.
 
 ---
+
+
+If port 8080 is still occupied after stopping, find and kill the process:
+```
+netstat -ano | findstr :8080
+taskkill /PID <the_pid_number> /F
 
 ## Step 8 — Run the application
 
